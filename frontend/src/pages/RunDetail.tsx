@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import type { EvaluationRun, RunComparison } from '../types';
-import { ArrowLeft, AlertTriangle, CheckCircle, Info, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import type { EvaluationRun, RunComparison, CalibrationReport } from '../types';
+import { ArrowLeft, AlertTriangle, CheckCircle, Info, ChevronDown, ChevronUp, Search, Bookmark } from 'lucide-react';
 
 interface RunDetailProps {
   runAId: number;
   runBId?: number; // Optional comparison run ID
   onBack: () => void;
+  onOpenAnnotationQueue?: (runId: number) => void;
 }
 
-export const RunDetail: React.FC<RunDetailProps> = ({ runAId, runBId, onBack }) => {
+export const RunDetail: React.FC<RunDetailProps> = ({ runAId, runBId, onBack, onOpenAnnotationQueue }) => {
   const [singleRun, setSingleRun] = useState<EvaluationRun | null>(null);
   const [comparison, setComparison] = useState<RunComparison | null>(null);
+  const [calibrationReport, setCalibrationReport] = useState<CalibrationReport | null>(null);
   const [loading, setLoading] = useState(true);
   
   // UI filter states
@@ -31,6 +33,9 @@ export const RunDetail: React.FC<RunDetailProps> = ({ runAId, runBId, onBack }) 
       } else {
         const runData = await api.getRun(runAId);
         setSingleRun(runData);
+        // Load calibration metrics for single runs
+        const calData = await api.getRunCalibration(runAId);
+        setCalibrationReport(calData);
       }
     } catch (err) {
       console.error('Error loading run details:', err);
@@ -38,6 +43,7 @@ export const RunDetail: React.FC<RunDetailProps> = ({ runAId, runBId, onBack }) 
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     loadData();
@@ -317,17 +323,28 @@ export const RunDetail: React.FC<RunDetailProps> = ({ runAId, runBId, onBack }) 
     return (
       <div className="space-y-6 p-6 max-w-7xl mx-auto text-slate-100 animate-in fade-in duration-200">
         {/* Breadcrumb Header */}
-        <div className="flex items-center space-x-3">
-          <button 
-            onClick={onBack}
-            className="p-2 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-md transition-all"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Evaluation Details</h1>
-            <p className="text-sm text-slate-400">Run: {singleRun.name}</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={onBack}
+              className="p-2 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-md transition-all"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-white">Evaluation Details</h1>
+              <p className="text-sm text-slate-400">Run: {singleRun.name}</p>
+            </div>
           </div>
+          {onOpenAnnotationQueue && (
+            <button
+              onClick={() => onOpenAnnotationQueue(runAId)}
+              className="flex items-center px-4 py-2 bg-slate-900 border border-slate-850 hover:border-slate-700 text-slate-200 hover:text-white rounded-md font-semibold text-xs tracking-wider transition-all gap-1.5 shadow"
+            >
+              <Bookmark className="w-4 h-4 text-emerald-450" />
+              Annotation Queue
+            </button>
+          )}
         </div>
 
         {/* Aggregate Stats Summary Card */}
@@ -361,6 +378,162 @@ export const RunDetail: React.FC<RunDetailProps> = ({ runAId, runBId, onBack }) 
             </div>
           </div>
         </div>
+
+        {/* Judge Calibration Panel */}
+        {calibrationReport && (
+          calibrationReport.annotated_count > 0 ? (
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
+              <div className="flex justify-between items-center pb-3 border-b border-slate-800/60">
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  Judge Accuracy Calibration (Human-in-the-Loop Agreement)
+                </h3>
+                <span className="text-xs text-slate-400 bg-slate-850 px-2 py-0.5 rounded font-mono">
+                  {calibrationReport.annotated_count} Annotations
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* 1. Faithfulness calibration details */}
+                {calibrationReport.faithfulness && (
+                  <div className="bg-slate-950/40 p-4 rounded border border-slate-850/60 space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-900 pb-2">
+                      <span className="text-xs font-bold text-slate-300">Groundedness (Faithful)</span>
+                      <span className="text-emerald-400 text-xs font-bold font-mono">Kappa: {calibrationReport.faithfulness.cohens_kappa}</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-center">
+                      <div className="text-slate-500 py-1"></div>
+                      <div className="bg-slate-950/80 text-slate-400 py-1 font-semibold rounded-t">Human 1</div>
+                      <div className="bg-slate-950/80 text-slate-400 py-1 font-semibold rounded-t">Human 0</div>
+                      
+                      <div className="bg-slate-950/80 text-slate-400 flex items-center justify-center font-semibold rounded-l">Judge 1</div>
+                      <div className="bg-emerald-950/20 text-emerald-400 p-2 border border-emerald-900/25" title="True Positives">
+                        <span className="block text-slate-650 text-[8px]">TP</span>
+                        <span className="text-sm font-bold">{calibrationReport.faithfulness.confusion_matrix.tp}</span>
+                      </div>
+                      <div className="bg-red-950/20 text-red-400 p-2 border border-red-900/25" title="False Positives">
+                        <span className="block text-slate-650 text-[8px]">FP</span>
+                        <span className="text-sm font-bold">{calibrationReport.faithfulness.confusion_matrix.fp}</span>
+                      </div>
+                      
+                      <div className="bg-slate-950/80 text-slate-400 flex items-center justify-center font-semibold rounded-l">Judge 0</div>
+                      <div className="bg-amber-950/10 text-amber-400 p-2 border border-amber-900/25" title="False Negatives">
+                        <span className="block text-slate-650 text-[8px]">FN</span>
+                        <span className="text-sm font-bold">{calibrationReport.faithfulness.confusion_matrix.fn}</span>
+                      </div>
+                      <div className="bg-emerald-950/20 text-emerald-400 p-2 border border-emerald-900/25" title="True Negatives">
+                        <span className="block text-slate-650 text-[8px]">TN</span>
+                        <span className="text-sm font-bold">{calibrationReport.faithfulness.confusion_matrix.tn}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-400 border-t border-slate-900 pt-2">
+                      <div>F1 Score: <span className="text-slate-200">{(calibrationReport.faithfulness.f1_score * 100).toFixed(0)}%</span></div>
+                      <div>Accuracy: <span className="text-slate-200">{(calibrationReport.faithfulness.accuracy * 100).toFixed(0)}%</span></div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Relevance calibration details */}
+                {calibrationReport.relevance && (
+                  <div className="bg-slate-950/40 p-4 rounded border border-slate-850/60 space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-900 pb-2">
+                      <span className="text-xs font-bold text-slate-300">Answer Relevance</span>
+                      <span className="text-sky-400 text-xs font-bold font-mono">Kappa: {calibrationReport.relevance.cohens_kappa}</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-center">
+                      <div className="text-slate-500 py-1"></div>
+                      <div className="bg-slate-950/80 text-slate-400 py-1 font-semibold rounded-t">Human 1</div>
+                      <div className="bg-slate-950/80 text-slate-400 py-1 font-semibold rounded-t">Human 0</div>
+                      
+                      <div className="bg-slate-950/80 text-slate-400 flex items-center justify-center font-semibold rounded-l">Judge 1</div>
+                      <div className="bg-emerald-950/20 text-emerald-400 p-2 border border-emerald-900/25" title="True Positives">
+                        <span className="block text-slate-650 text-[8px]">TP</span>
+                        <span className="text-sm font-bold">{calibrationReport.relevance.confusion_matrix.tp}</span>
+                      </div>
+                      <div className="bg-red-950/20 text-red-400 p-2 border border-red-900/25" title="False Positives">
+                        <span className="block text-slate-650 text-[8px]">FP</span>
+                        <span className="text-sm font-bold">{calibrationReport.relevance.confusion_matrix.fp}</span>
+                      </div>
+                      
+                      <div className="bg-slate-950/80 text-slate-400 flex items-center justify-center font-semibold rounded-l">Judge 0</div>
+                      <div className="bg-amber-950/10 text-amber-400 p-2 border border-amber-900/25" title="False Negatives">
+                        <span className="block text-slate-650 text-[8px]">FN</span>
+                        <span className="text-sm font-bold">{calibrationReport.relevance.confusion_matrix.fn}</span>
+                      </div>
+                      <div className="bg-emerald-950/20 text-emerald-400 p-2 border border-emerald-900/25" title="True Negatives">
+                        <span className="block text-slate-650 text-[8px]">TN</span>
+                        <span className="text-sm font-bold">{calibrationReport.relevance.confusion_matrix.tn}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-400 border-t border-slate-900 pt-2">
+                      <div>F1 Score: <span className="text-slate-200">{(calibrationReport.relevance.f1_score * 100).toFixed(0)}%</span></div>
+                      <div>Accuracy: <span className="text-slate-200">{(calibrationReport.relevance.accuracy * 100).toFixed(0)}%</span></div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Context Recall calibration details */}
+                {calibrationReport.context_recall && (
+                  <div className="bg-slate-950/40 p-4 rounded border border-slate-850/60 space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-900 pb-2">
+                      <span className="text-xs font-bold text-slate-300">Context Recall</span>
+                      <span className="text-indigo-400 text-xs font-bold font-mono">Kappa: {calibrationReport.context_recall.cohens_kappa}</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-center">
+                      <div className="text-slate-500 py-1"></div>
+                      <div className="bg-slate-950/80 text-slate-400 py-1 font-semibold rounded-t">Human 1</div>
+                      <div className="bg-slate-950/80 text-slate-400 py-1 font-semibold rounded-t">Human 0</div>
+                      
+                      <div className="bg-slate-950/80 text-slate-400 flex items-center justify-center font-semibold rounded-l">Judge 1</div>
+                      <div className="bg-emerald-950/20 text-emerald-400 p-2 border border-emerald-900/25" title="True Positives">
+                        <span className="block text-slate-650 text-[8px]">TP</span>
+                        <span className="text-sm font-bold">{calibrationReport.context_recall.confusion_matrix.tp}</span>
+                      </div>
+                      <div className="bg-red-950/20 text-red-400 p-2 border border-red-900/25" title="False Positives">
+                        <span className="block text-slate-650 text-[8px]">FP</span>
+                        <span className="text-sm font-bold">{calibrationReport.context_recall.confusion_matrix.fp}</span>
+                      </div>
+                      
+                      <div className="bg-slate-950/80 text-slate-400 flex items-center justify-center font-semibold rounded-l">Judge 0</div>
+                      <div className="bg-amber-950/10 text-amber-400 p-2 border border-amber-900/25" title="False Negatives">
+                        <span className="block text-slate-650 text-[8px]">FN</span>
+                        <span className="text-sm font-bold">{calibrationReport.context_recall.confusion_matrix.fn}</span>
+                      </div>
+                      <div className="bg-emerald-950/20 text-emerald-400 p-2 border border-emerald-900/25" title="True Negatives">
+                        <span className="block text-slate-650 text-[8px]">TN</span>
+                        <span className="text-sm font-bold">{calibrationReport.context_recall.confusion_matrix.tn}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-400 border-t border-slate-900 pt-2">
+                      <div>F1 Score: <span className="text-slate-200">{(calibrationReport.context_recall.f1_score * 100).toFixed(0)}%</span></div>
+                      <div>Accuracy: <span className="text-slate-200">{(calibrationReport.context_recall.accuracy * 100).toFixed(0)}%</span></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-slate-700 transition-all">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-200">Judge Calibration Offline</h4>
+                <p className="text-xs text-slate-400 mt-0.5">Annotate SUT responses in the Annotation Queue to calculate confusion matrix agreement stats.</p>
+              </div>
+              {onOpenAnnotationQueue && (
+                <button
+                  onClick={() => onOpenAnnotationQueue(runAId)}
+                  className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1.5"
+                >
+                  <Bookmark className="w-3.5 h-3.5 text-blue-400" /> Start Annotating
+                </button>
+              )}
+            </div>
+          )
+        )}
 
         {/* Toolbar */}
         <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">

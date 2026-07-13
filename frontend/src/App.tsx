@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Dashboard } from './pages/Dashboard';
 import { RunDetail } from './pages/RunDetail';
+import { AnnotationQueue } from './pages/AnnotationQueue';
 import { Activity, BookOpen } from 'lucide-react';
 
-type ViewState = 'dashboard' | 'detail' | 'compare';
+type ViewState = 'dashboard' | 'detail' | 'compare' | 'annotation-queue';
 
 function App() {
   const [view, setView] = useState<ViewState>('dashboard');
@@ -20,6 +21,11 @@ function App() {
     setRunAId(id);
     setRunBId(null);
     setView('detail');
+  };
+
+  const handleOpenAnnotationQueue = (id: number) => {
+    setRunAId(id);
+    setView('annotation-queue');
   };
 
   const handleBackToDashboard = () => {
@@ -74,6 +80,13 @@ function App() {
             runAId={runAId} 
             runBId={runBId || undefined} 
             onBack={handleBackToDashboard} 
+            onOpenAnnotationQueue={handleOpenAnnotationQueue}
+          />
+        )}
+        {view === 'annotation-queue' && runAId !== null && (
+          <AnnotationQueue
+            runId={runAId}
+            onBack={() => handleViewDetails(runAId)}
           />
         )}
       </main>

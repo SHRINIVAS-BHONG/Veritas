@@ -7,6 +7,7 @@ from backend.app.models.evaluation import EvaluationRun, EvaluationResult
 from backend.app.models.annotation import Annotation
 from backend.app.api.dataset import router as dataset_router
 from backend.app.api.evaluation import router as evaluation_router
+from backend.app.api.annotation import router as annotation_router
 
 # Create database tables (SQLite default, PostgreSQL handled via migration or docker compose)
 Base.metadata.create_all(bind=engine)
@@ -29,6 +30,7 @@ app.add_middleware(
 # Mount API Routers
 app.include_router(dataset_router)
 app.include_router(evaluation_router)
+app.include_router(annotation_router)
 
 @app.get("/")
 def read_root():

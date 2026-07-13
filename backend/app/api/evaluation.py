@@ -238,3 +238,107 @@ def compare_evaluation_runs(run_a_id: int, run_b_id: int, db: Session = Depends(
         },
         "comparison": comparison
     }
+
+def _calculate_metrics_for_pairs(pairs):
+    """Helper calculating confusion matrix, F1, and Cohen's Kappa from binary pairs list."""
+    if not pairs:
+        return {
+            "confusion_matrix": {"tp": 0, "fp": 0, "fn": 0, "tn": 0},
+            "cohens_kappa": 0.0,
+            "accuracy": 0.0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1_score": 0.0
+        }
+        
+    tp = sum(1 for j, h in pairs if j == 1 and h == 1)
+    fp = sum(1 for j, h in pairs if j == 1 and h == 0)
+    fn = sum(1 for j, h in pairs if j == 0 and h == 1)
+    tn = sum(1 for j, h in pairs if j == 0 and h == 0)
+    total = len(pairs)
+    
+    accuracy = (tp + tn) / total
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+    
+    # Cohen's Kappa
+    p_o = (tp + tn) / total
+    p_yes = ((tp + fp) / total) * ((tp + fn) / total)
+    p_no = ((tn + fn) / total) * ((tn + fp) / total)
+    p_e = p_yes + p_no
+    
+    if p_e >= 1.0 or abs(1.0 - p_e) < 1e-9:
+        kappa = 1.0 if p_o == 1.0 else 0.0
+    else:
+        kappa = (p_o - p_e) / (1.0 - p_e)
+        
+    return {
+        "confusion_matrix": {"tp": tp, "fp": fp, "fn": fn, "tn": tn},
+        "cohens_kappa": round(kappa, 3),
+        "accuracy": round(accuracy, 3),
+        "precision": round(precision, 3),
+        "recall": round(recall, 3),
+        "f1_score": round(f1, 3)
+    }
+
+@router.get("/runs/{run_id}/calibration")
+def get_judge_calibration(run_id: int, db: Session = Depends(get_db)):
+    """Computes calibration statistics comparing LLM-as-judge scores to human annotations.
+    
+    Threshold of 0.70 is used to bin scores into binary positive/negative classes.
+    """
+    from backend.app.models.annotation import Annotation as DBAnnotation
+    
+    results = db.query(DBEvaluationResult).filter(DBEvaluationResult.run_id == run_id).all()
+    annotations = db.query(DBAnnotation).filter(DBAnnotation.run_id == run_id).all()
+    
+    annotated_count = len(annotations)
+    if annotated_count == 0:
+        return {
+            "annotated_count": 0,
+            "faithfulness": None,
+            "relevance": None,
+            "context_recall": None,
+            "message": "No annotations found to calculate calibration. Review cases in the Annotation Queue first."
+        }
+        
+    ann_map = {ann.result_id: ann for ann in annotations}
+    
+    faith_pairs = []
+    relevance_pairs = []
+    recall_pairs = []
+    
+    # 0.70 threshold for metric classifications
+    threshold = 0.70
+    
+    for r in results:
+        ann = ann_map.get(r.id)
+        if not ann:
+            continue
+            
+        # 1. Faithfulness
+        if r.faithfulness is not None and ann.faithfulness_user is not None:
+            j_label = 1 if r.faithfulness >= threshold else 0
+            h_label = 1 if ann.faithfulness_user >= threshold else 0
+            faith_pairs.append((j_label, h_label))
+            
+        # 2. Relevance
+        if r.relevance is not None and ann.relevance_user is not None:
+            j_label = 1 if r.relevance >= threshold else 0
+            h_label = 1 if ann.relevance_user >= threshold else 0
+            relevance_pairs.append((j_label, h_label))
+            
+        # 3. Context Recall
+        if r.context_recall is not None and ann.context_recall_user is not None:
+            j_label = 1 if r.context_recall >= threshold else 0
+            h_label = 1 if ann.context_recall_user >= threshold else 0
+            recall_pairs.append((j_label, h_label))
+            
+    return {
+        "annotated_count": annotated_count,
+        "faithfulness": _calculate_metrics_for_pairs(faith_pairs),
+        "relevance": _calculate_metrics_for_pairs(relevance_pairs),
+        "context_recall": _calculate_metrics_for_pairs(recall_pairs)
+    }
+

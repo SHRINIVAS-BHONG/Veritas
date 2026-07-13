@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Dataset, EvaluationRun, RunComparison } from '../types';
+import type { Dataset, EvaluationRun, RunComparison, Annotation, CalibrationReport } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -47,6 +47,30 @@ export const api = {
     const res = await client.get<RunComparison>(
       `/evaluations/compare?run_a_id=${runAId}&run_b_id=${runBId}`
     );
+    return res.data;
+  },
+  
+  // --- Human-in-the-Loop Annotations ---
+  submitAnnotation: async (payload: {
+    result_id: number;
+    run_id: number;
+    annotator_name?: string;
+    faithfulness_user: number | null;
+    relevance_user: number | null;
+    context_recall_user: number | null;
+    notes: string | null;
+  }): Promise<Annotation> => {
+    const res = await client.post<Annotation>('/annotations/', payload);
+    return res.data;
+  },
+  
+  getRunAnnotations: async (runId: number): Promise<Annotation[]> => {
+    const res = await client.get<Annotation[]>(`/annotations/run/${runId}`);
+    return res.data;
+  },
+  
+  getRunCalibration: async (runId: number): Promise<CalibrationReport> => {
+    const res = await client.get<CalibrationReport>(`/evaluations/runs/${runId}/calibration`);
     return res.data;
   }
 };

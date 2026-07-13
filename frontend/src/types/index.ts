@@ -103,3 +103,35 @@ export interface RunComparison {
   run_b: ComparisonRunDetails;
   comparison: CompareResultItem[];
 }
+
+export interface Annotation {
+  id?: number;
+  result_id: number;
+  run_id: number;
+  annotator_name?: string;
+  faithfulness_user?: number;
+  relevance_user?: number;
+  context_recall_user?: number;
+  is_disagreement?: boolean;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CalibrationMetricDetails {
+  confusion_matrix: { tp: number; fp: number; fn: number; tn: number };
+  cohens_kappa: number;
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1_score: number;
+}
+
+export interface CalibrationReport {
+  annotated_count: number;
+  faithfulness: CalibrationMetricDetails | null;
+  relevance: CalibrationMetricDetails | null;
+  context_recall: CalibrationMetricDetails | null;
+  message?: string;
+}
+
