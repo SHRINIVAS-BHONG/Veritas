@@ -106,66 +106,136 @@ Veritas/
 └── README.md                          # Detailed case study documentation
 ```
 
----
-
-## 🚀 Setup & Execution Guide
-
-### Local Development Setup
-
-#### 1. Setup Backend Environment
-1. Navigate to the `backend` directory:
-   ```bash
-   cd backend
-   ```
-2. Initialize virtual environment and install packages:
-   ```bash
-   py -3.12 -m venv .venv
-   .venv\Scripts\activate      # Windows
-   source .venv/bin/activate   # macOS/Linux
-   pip install -r requirements.txt
-   ```
-3. Set your environment variables (create a `backend/.env` file):
-   ```env
-   OPENAI_API_KEY=your-openai-key
-   DATABASE_URL=sqlite:///./veritas.db
-   ```
-4. Run the seed script to populate the datasets:
-   ```bash
-   python app/seed.py
-   ```
-5. Start the API server:
-   ```bash
-   python run_server.py
-   ```
-
-#### 2. Setup Frontend Client
-1. Navigate to the `frontend` directory:
-   ```bash
-   cd frontend
-   ```
-2. Install npm packages:
-   ```bash
-   npm install
-   ```
-3. Launch Vite development client:
-   ```bash
-   npm run dev
-   ```
-   Open `http://localhost:5173` to explore the dashboard.
-
----
-
-## 🐳 Docker Compose Packaging
-
-The entire stack (API, Nginx frontend, Redis cache, Postgres vector store, and RQ worker) can be packaged using Docker:
+## ⚡ Quick Start (Get Running in 2 Minutes)
 
 ```bash
-# Build images and start all services in the background
+# 1. Clone the repo
+git clone https://github.com/SHRINIVAS-BHONG/Veritas.git
+cd Veritas
+
+# 2. Setup Backend
+cd backend
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # macOS/Linux
+pip install -r requirements.txt
+
+# 3. Create environment file
+echo HUGGINGFACE_API_KEY=your_hf_token_here > .env
+
+# 4. Seed the database with test datasets
+python app/seed.py
+
+# 5. Start the API server
+python run_server.py
+```
+
+Open a **second terminal**:
+```bash
+# 6. Setup & start Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+🎉 **Open `http://localhost:5173`** — you're live!
+
+---
+
+## 📋 Prerequisites
+
+| Tool | Version | Check |
+|------|---------|-------|
+| **Python** | 3.12+ | `python --version` |
+| **Node.js** | 18+ | `node --version` |
+| **npm** | 9+ | `npm --version` |
+| **Git** | Any | `git --version` |
+
+---
+
+## 🚀 Detailed Setup & Execution Guide
+
+### Option A: Local Development (Recommended)
+
+#### 1. Backend Setup
+```bash
+cd backend
+
+# Create and activate virtual environment
+python -m venv .venv
+.venv\Scripts\activate        # Windows PowerShell
+# source .venv/bin/activate   # macOS / Linux
+
+# Install Python dependencies
+pip install -r requirements.txt
+```
+
+#### 2. Configure Environment Variables
+Create a `backend/.env` file:
+```env
+# Required — Get your free token at https://huggingface.co/settings/tokens
+HUGGINGFACE_API_KEY=hf_your_token_here
+
+# Optional — Only needed if using OpenAI models
+OPENAI_API_KEY=sk-your-key-here
+
+# Optional — Defaults to SQLite (no setup needed)
+DATABASE_URL=sqlite:///./veritas.db
+```
+
+#### 3. Seed the Database
+```bash
+# From backend/ directory
+python app/seed.py
+```
+This loads the Golden Set (20 FAQ cases) and Safety Set (10 adversarial cases) into the database.
+
+#### 4. Start the API Server
+```bash
+python run_server.py
+```
+The API will be running at `http://localhost:8000`. Swagger docs at `http://localhost:8000/docs`.
+
+#### 5. Frontend Setup (New Terminal)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open `http://localhost:5173` to access the dashboard.
+
+---
+
+### Option B: Docker Compose (Full Stack)
+
+Run everything with one command (requires [Docker Desktop](https://www.docker.com/products/docker-desktop/)):
+
+```bash
 docker compose up -d --build
 ```
-Port Mappings:
-* Frontend Client: `http://localhost:3000`
-* FastAPI Backend API: `http://localhost:8000`
+
+| Service | URL |
+|---------|-----|
+| Frontend | `http://localhost:3000` |
+| Backend API | `http://localhost:8000` |
+| Swagger Docs | `http://localhost:8000/docs` |
+
+To stop:
+```bash
+docker compose down
+```
+
+---
+
+### Option C: Deploy to Render (Cloud)
+
+This repo includes a `render.yaml` blueprint for one-click deployment:
+
+1. Go to [render.com/blueprints](https://render.com/blueprints) → **New Blueprint Instance**
+2. Connect your GitHub fork of this repo
+3. Render auto-detects `render.yaml` and creates both services
+4. Enter your `HUGGINGFACE_API_KEY` when prompted
+5. Click **Apply** — both backend and frontend deploy automatically
 
 ---
 
