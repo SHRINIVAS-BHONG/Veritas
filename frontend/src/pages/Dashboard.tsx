@@ -360,17 +360,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onCompare, onViewDetails }
               {/* SUT Model selection */}
               <div>
                 <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">System Model</label>
-                <select
+                <input
+                  type="text"
+                  placeholder="e.g. gpt-4o-mini or hf/mistralai/Mistral-7B-Instruct-v0.2"
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-md p-2.5 text-white focus:border-slate-700 outline-none text-sm"
-                >
-                  <option value="gpt-4o-mini">gpt-4o-mini (Cheap / Fast)</option>
-                  <option value="gpt-4o">gpt-4o (Smart / High quality)</option>
-                  <option value="claude-3-5-sonnet">claude-3-5-sonnet (Highly precise)</option>
-                  <option value="claude-3-haiku">claude-3-haiku</option>
-                  <option value="ollama/llama3">ollama/llama3 (Local default)</option>
-                </select>
+                  required
+                />
               </div>
 
               {/* Prompt version */}

@@ -138,16 +138,17 @@ Design notes: use a dense, data-tool aesthetic (think Linear/Vercel dashboards) 
 
 ---
 
-## 8. Build plan (5–6 weeks, part-time pace)
+## 8. Build plan & Status (Completed!)
 
-| Week | Deliverable |
-|---|---|
-| 1 | System-under-test: minimal RAG chatbot (retriever + generator) working end-to-end on your chosen docs |
-| 2 | Golden dataset built + deterministic metrics + basic FastAPI endpoints to run an eval and store results in Postgres |
-| 3 | LLM-as-judge metrics (faithfulness, relevance, context precision/recall) with reasoning traces stored |
-| 4 | React dashboard: run list + run detail/diff view wired to the backend |
-| 5 | Annotation queue UI + judge-calibration report; safety/cost metrics added |
-| 6 | GitHub Actions CI gate, Docker Compose packaging, deploy a live demo, write the README/case-study |
+| Week | Deliverable | Status |
+|---|---|---|
+| 1 | System-under-test: minimal RAG chatbot (retriever + generator) working end-to-end on FAQ docs | **[x] COMPLETED** |
+| 2 | Golden dataset built + deterministic metrics + SQLite / Postgres results persistence | **[x] COMPLETED** |
+| 3 | LLM-as-judge metrics (faithfulness, relevance, context precision/recall) with reasoning traces stored | **[x] COMPLETED** |
+| 4 | React dashboard: run list + run detail/diff view wired to the backend | **[x] COMPLETED** |
+| 5 | Annotation queue UI + human-in-the-loop judge-calibration report (Cohen's Kappa & Confusion Matrix) | **[x] COMPLETED** |
+| 6 | GitHub Actions CI gate, Docker Compose packaging, and multi-stage container deployment configurations | **[x] COMPLETED** |
+| Phase 2 | **100 Tricky Cases Expansion** (Permutation-generated edge-cases) + **Hugging Face Inference API Routing** | **[x] COMPLETED** |
 
 ---
 

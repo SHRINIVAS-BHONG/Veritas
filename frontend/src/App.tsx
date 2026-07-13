@@ -56,7 +56,7 @@ function App() {
               Evaluation Runs
             </button>
             <a 
-              href="https://github.com" 
+              href="http://127.0.0.1:8000/docs" 
               target="_blank" 
               rel="noreferrer"
               className="hover:text-white transition-colors flex items-center gap-1.5"

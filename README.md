@@ -135,7 +135,7 @@ Veritas/
    ```
 5. Start the API server:
    ```bash
-   uvicorn app.main:app --reload
+   python run_server.py
    ```
 
 #### 2. Setup Frontend Client

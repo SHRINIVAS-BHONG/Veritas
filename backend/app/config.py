@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     # LLM APIs
     OPENAI_API_KEY: str | None = Field(default=None, env="OPENAI_API_KEY")
     ANTHROPIC_API_KEY: str | None = Field(default=None, env="ANTHROPIC_API_KEY")
+    HUGGINGFACE_API_KEY: str | None = Field(default=None, env="HUGGINGFACE_API_KEY")
     OLLAMA_BASE_URL: str = Field(default="http://localhost:11434", env="OLLAMA_BASE_URL")
     
     # System Under Test (SUT) Settings

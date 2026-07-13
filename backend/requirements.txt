@@ -13,3 +13,4 @@ anthropic
 rouge-score
 nltk
 python-dotenv
+huggingface_hub

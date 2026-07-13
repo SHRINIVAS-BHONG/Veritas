@@ -14,6 +14,8 @@ from backend.app.models.annotation import Annotation
 WORKSPACE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GOLDEN_SET_PATH = os.path.join(WORKSPACE_DIR, "data", "golden_set.json")
 SAFETY_SET_PATH = os.path.join(WORKSPACE_DIR, "data", "safety_set.json")
+TRICKY_SET_PATH = os.path.join(WORKSPACE_DIR, "data", "tricky_set.json")
+TRICKY_SET_100_PATH = os.path.join(WORKSPACE_DIR, "data", "tricky_set_100.json")
 
 def seed_database():
     print("Initializing database tables...")
@@ -90,6 +92,73 @@ def seed_database():
                 print(f"Dataset '{safety_dataset_name}' already exists. Skipping seeding.")
         else:
             print(f"Safety set file not found at {SAFETY_SET_PATH}")
+            
+        # 3. Seed Tricky Dataset
+        if os.path.exists(TRICKY_SET_PATH):
+            with open(TRICKY_SET_PATH, "r", encoding="utf-8") as f:
+                tricky_cases = json.load(f)
+                
+            tricky_dataset_name = "Tricky Set v1"
+            db_tricky_dataset = db.query(Dataset).filter(Dataset.name == tricky_dataset_name).first()
+            
+            if not db_tricky_dataset:
+                print(f"Creating dataset '{tricky_dataset_name}'...")
+                db_tricky_dataset = Dataset(
+                    name=tricky_dataset_name, 
+                    description="Advanced dataset with hard and tricky questions containing multi-hop logic, constraints, and negative fact queries."
+                )
+                db.add(db_tricky_dataset)
+                db.commit()
+                db.refresh(db_tricky_dataset)
+                
+                # Add test cases
+                for tc in tricky_cases:
+                    new_tc = TestCase(
+                        dataset_id=db_tricky_dataset.id,
+                        question=tc["question"],
+                        expected_answer=tc["expected_answer"],
+                        reference_context=tc.get("reference_context")
+                    )
+                    db.add(new_tc)
+                db.commit()
+                print(f"Successfully seeded {len(tricky_cases)} test cases into '{tricky_dataset_name}'.")
+            else:
+                print(f"Dataset '{tricky_dataset_name}' already exists. Skipping seeding.")
+        else:
+            print(f"Tricky set file not found at {TRICKY_SET_PATH}")
+            
+        # 4. Seed Tricky 100 Dataset
+        if os.path.exists(TRICKY_SET_100_PATH):
+            with open(TRICKY_SET_100_PATH, "r", encoding="utf-8") as f:
+                tricky_100_cases = json.load(f)
+                
+            tricky_100_dataset_name = "100 Tricky Cases v1"
+            db_tricky_100_dataset = db.query(Dataset).filter(Dataset.name == tricky_100_dataset_name).first()
+            
+            if not db_tricky_100_dataset:
+                print(f"Creating dataset '{tricky_100_dataset_name}'...")
+                db_tricky_100_dataset = Dataset(
+                    name=tricky_100_dataset_name, 
+                    description="Procedurally generated dataset of 100 highly complex evaluation cases."
+                )
+                db.add(db_tricky_100_dataset)
+                db.commit()
+                db.refresh(db_tricky_100_dataset)
+                
+                for tc in tricky_100_cases:
+                    new_tc = TestCase(
+                        dataset_id=db_tricky_100_dataset.id,
+                        question=tc["question"],
+                        expected_answer=tc["expected_answer"],
+                        reference_context=tc.get("reference_context")
+                    )
+                    db.add(new_tc)
+                db.commit()
+                print(f"Successfully seeded {len(tricky_100_cases)} test cases into '{tricky_100_dataset_name}'.")
+            else:
+                print(f"Dataset '{tricky_100_dataset_name}' already exists. Skipping seeding.")
+        else:
+            print(f"Tricky 100 set file not found at {TRICKY_SET_100_PATH}")
             
     except Exception as e:
         print(f"Error seeding database: {e}")

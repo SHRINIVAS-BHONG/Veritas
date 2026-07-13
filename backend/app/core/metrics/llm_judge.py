@@ -8,6 +8,7 @@ class LLMJudge:
     def __init__(self):
         self.openai_client = None
         self.anthropic_client = None
+        self.hf_client = None
         
         # Initialize API clients if keys are present
         if settings.OPENAI_API_KEY:
@@ -23,6 +24,13 @@ class LLMJudge:
                 self.anthropic_client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
             except ImportError:
                 print("Anthropic client failed to load in LLMJudge.")
+                
+        if settings.HUGGINGFACE_API_KEY:
+            try:
+                from huggingface_hub import InferenceClient
+                self.hf_client = InferenceClient(api_key=settings.HUGGINGFACE_API_KEY)
+            except ImportError:
+                print("Hugging Face client failed to load in LLMJudge.")
 
     def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
         """Helper to invoke OpenAI, Anthropic, or return empty string."""
@@ -53,8 +61,22 @@ class LLMJudge:
             )
             return response.content[0].text.strip()
             
-        # 3. Fallback/Local Ollama or Mock (handled in callers)
-        raise ValueError("No API client configuration found for LLM Judge call.")
+        # 3. Use Hugging Face Inference API
+        elif self.hf_client and model.startswith("hf/"):
+            hf_model = model[3:]
+            response = self.hf_client.chat_completion(
+                model=hf_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.1,
+                max_tokens=1024
+            )
+            return response.choices[0].message.content.strip()
+            
+        # 4. Fallback/Local Ollama or Mock (handled in callers)
+        raise ValueError(f"No API client configuration found for LLM Judge call with model: {model}")
 
     def evaluate_faithfulness(self, answer: str, context: str) -> Tuple[float, str]:
         """Checks if the answer is fully grounded in the retrieved context using claim-decomposition.
@@ -63,7 +85,7 @@ class LLMJudge:
             Tuple[score, reasoning_trace]
         """
         # If API keys are missing, run the deterministic mock groundedness check
-        if not self.openai_client and not self.anthropic_client:
+        if not self.openai_client and not self.anthropic_client and not self.hf_client:
             return self._mock_faithfulness(answer, context)
             
         try:
@@ -154,7 +176,7 @@ class LLMJudge:
         Returns:
             Tuple[score, reasoning_trace]
         """
-        if not self.openai_client and not self.anthropic_client:
+        if not self.openai_client and not self.anthropic_client and not self.hf_client:
             return self._mock_context_recall(expected_answer, context)
             
         try:

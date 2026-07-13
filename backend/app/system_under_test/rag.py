@@ -12,6 +12,7 @@ class RAGChatbot:
         # Initialize LLM clients if keys are present
         self.openai_client = None
         self.anthropic_client = None
+        self.hf_client = None
         
         if settings.OPENAI_API_KEY:
             try:
@@ -26,6 +27,13 @@ class RAGChatbot:
                 self.anthropic_client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
             except ImportError:
                 print("Anthropic library not installed, fallback enabled.")
+                
+        if settings.HUGGINGFACE_API_KEY:
+            try:
+                from huggingface_hub import InferenceClient
+                self.hf_client = InferenceClient(api_key=settings.HUGGINGFACE_API_KEY)
+            except ImportError:
+                print("Hugging Face library not installed, fallback enabled.")
 
     def generate_response(self, query: str, retrieved_contexts: List[str], model: str = None) -> Dict[str, Any]:
         """Generates an answer based on query and retrieved contexts using the specified LLM."""
@@ -82,8 +90,26 @@ class RAGChatbot:
                 tokens_in = response.usage.input_tokens
                 tokens_out = response.usage.output_tokens
                 
-            # 3. Check if we should use Ollama (local) or fallback if keys are missing
-            elif model.startswith("ollama/") or (not self.openai_client and not self.anthropic_client):
+            # 3. Check if we should use Hugging Face
+            elif model.startswith("hf/") and self.hf_client:
+                provider = "huggingface"
+                hf_model = model[3:]
+                response = self.hf_client.chat_completion(
+                    model=hf_model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": query}
+                    ],
+                    temperature=0.1,
+                    max_tokens=1024
+                )
+                answer = response.choices[0].message.content.strip()
+                # Estimate tokens for free-tier HF API
+                tokens_in = int(len((system_prompt + query).split()) * 1.3)
+                tokens_out = int(len(answer.split()) * 1.3)
+                
+            # 4. Check if we should use Ollama (local) or fallback if keys are missing
+            elif model.startswith("ollama/") or (not self.openai_client and not self.anthropic_client and not self.hf_client):
                 provider = "ollama"
                 ollama_model = model.replace("ollama/", "") if model.startswith("ollama/") else "llama3"
                 

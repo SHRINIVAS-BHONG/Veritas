@@ -1,5 +1,6 @@
-import redis  # type: ignore
-from rq import Queue  # type: ignore
+import redis
+# pyrefly: ignore [missing-import]
+from rq import Queue
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 from backend.app.config import settings
