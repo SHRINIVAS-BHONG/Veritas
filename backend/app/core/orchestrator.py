@@ -1,5 +1,5 @@
-import redis
-from rq import Queue
+import redis  # type: ignore
+from rq import Queue  # type: ignore
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 from backend.app.config import settings

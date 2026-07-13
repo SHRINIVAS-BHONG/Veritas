@@ -4,8 +4,8 @@ import os
 # Add workspace directory to python path for package resolution
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-import redis
-from rq import Worker, Queue, Connection
+import redis  # type: ignore
+from rq import Worker, Queue, Connection  # type: ignore
 from backend.app.config import settings
 
 def start_worker():
