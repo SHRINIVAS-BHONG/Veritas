@@ -9,6 +9,8 @@ on:
 jobs:
   eval-gate:
     runs-on: ubuntu-latest
+    env:
+      HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
 
     steps:
     - name: Checkout repository code
