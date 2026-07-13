@@ -22,6 +22,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onCompare, onViewDetails }
   const [model, setModel] = useState('gpt-4o-mini');
   const [promptVersion, setPromptVersion] = useState('v1.0');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    await fetchData();
+    setTimeout(() => setIsRetrying(false), 500); // 500ms delay for visual feedback
+  };
 
   const fetchData = async () => {
     try {
@@ -114,36 +121,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ onCompare, onViewDetails }
     : 0.0;
 
   return (
-    <div className="space-y-8 p-6 max-w-7xl mx-auto">
+    <div className="space-y-6 p-8 max-w-7xl mx-auto font-sans">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-2">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">Veritas Dashboard</h1>
-          <p className="text-slate-400 mt-1">Automated LLM Evaluation and Observability Platform</p>
+          <h1 className="text-2xl font-bold text-[#111827] tracking-tight">Dashboard</h1>
+          <p className="text-[#6B7280] mt-1 text-sm">Monitor overall project health and recent evaluation runs</p>
         </div>
         <div className="flex space-x-3">
           {selectedRunIds.length === 2 && (
             <button
               onClick={() => onCompare(selectedRunIds[0], selectedRunIds[1])}
-              className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md font-semibold transition-all shadow-md gap-2"
+              className="flex items-center px-4 py-2 bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[#111827] border border-[#D1D5DB] rounded-md text-sm font-medium transition-all gap-2"
             >
               <BarChart2 className="w-4 h-4" />
-              Compare Selected Runs
+              Compare Runs
             </button>
           )}
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md font-semibold transition-all shadow-md gap-2"
+            className="flex items-center px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-md text-sm font-medium transition-all shadow-sm gap-2"
           >
             <Play className="w-4 h-4 fill-white" />
             New Evaluation
           </button>
           <button
             onClick={fetchData}
-            className="p-2 border border-slate-800 rounded-md text-slate-400 hover:text-white transition-all bg-slate-900/50"
+            className="p-2 border border-[#E5E7EB] rounded-md text-[#6B7280] hover:text-[#111827] transition-all bg-white hover:bg-[#F9FAFB]"
             title="Refresh logs"
           >
-            <RefreshCw className="w-5 h-5" />
+            <RefreshCw className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -151,104 +158,104 @@ export const Dashboard: React.FC<DashboardProps> = ({ onCompare, onViewDetails }
       {/* Sparkline Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Pass Rate Metric Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 flex flex-col justify-between hover:border-slate-700 transition-all">
+        <div className="bg-white border border-[#E5E7EB] rounded-xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-200">
           <div className="flex justify-between items-center">
-            <div className="text-slate-400 text-sm font-semibold uppercase tracking-wider flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-500" /> Pass Rate (F1 &ge; 0.70)
+            <div className="text-[#6B7280] text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-[#F59E0B]" /> Pass Rate (F1 &ge; 0.70)
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-[#111827] font-mono">
               {latestRun ? `${((latestRun.pass_rate || 0) * 100).toFixed(0)}%` : '0%'}
             </div>
           </div>
-          <div className="h-10 mt-4">
+          <div className="h-12 mt-4 -mx-1">
             {sparklineData.length > 0 && (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={sparklineData}>
-                  <Line type="monotone" dataKey="passRate" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="passRate" stroke="#F59E0B" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             )}
           </div>
-          <div className="text-xs text-slate-500 mt-2">Latest run status vs. historical average ({(avgPassRate * 100).toFixed(0)}%)</div>
+          <div className="text-[11px] text-[#9CA3AF] mt-2">Historical avg: {(avgPassRate * 100).toFixed(0)}%</div>
         </div>
 
         {/* Faithfulness Metric Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 flex flex-col justify-between hover:border-slate-700 transition-all">
+        <div className="bg-white border border-[#E5E7EB] rounded-xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-200">
           <div className="flex justify-between items-center">
-            <div className="text-slate-400 text-sm font-semibold uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 text-emerald-500" /> Faithfulness (Grounded)
+            <div className="text-[#6B7280] text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-[#10B981]" /> Faithfulness (Grounded)
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-[#111827] font-mono">
               {latestRun ? `${((latestRun.avg_faithfulness || 0) * 100).toFixed(0)}%` : '0%'}
             </div>
           </div>
-          <div className="h-10 mt-4">
+          <div className="h-12 mt-4 -mx-1">
             {sparklineData.length > 0 && (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={sparklineData}>
-                  <Line type="monotone" dataKey="faithfulness" stroke="#10b981" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="faithfulness" stroke="#10B981" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             )}
           </div>
-          <div className="text-xs text-slate-500 mt-2">LLM-as-judge groundedness metric across evaluations</div>
+          <div className="text-[11px] text-[#9CA3AF] mt-2">LLM-as-judge groundedness metric</div>
         </div>
 
         {/* Average Latency Metric Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 flex flex-col justify-between hover:border-slate-700 transition-all">
+        <div className="bg-white border border-[#E5E7EB] rounded-xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-200">
           <div className="flex justify-between items-center">
-            <div className="text-slate-400 text-sm font-semibold uppercase tracking-wider flex items-center gap-2">
-              <Clock className="w-4 h-4 text-sky-500" /> Avg Latency
+            <div className="text-[#6B7280] text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-[#0EA5E9]" /> Avg Latency
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-[#111827] font-mono">
               {latestRun ? `${(latestRun.avg_latency || 0).toFixed(3)}s` : '0.00s'}
             </div>
           </div>
-          <div className="h-10 mt-4">
+          <div className="h-12 mt-4 -mx-1">
             {sparklineData.length > 0 && (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={sparklineData}>
-                  <Line type="monotone" dataKey="latency" stroke="#0ea5e9" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="latency" stroke="#0EA5E9" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             )}
           </div>
-          <div className="text-xs text-slate-500 mt-2">Average response latency per evaluation question</div>
+          <div className="text-[11px] text-[#9CA3AF] mt-2">Average response latency per generation</div>
         </div>
       </div>
 
       {/* Runs Table Section */}
-      <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
-        <div className="p-5 border-b border-slate-800 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-white">Evaluation Log History</h2>
-          <span className="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded">
+      <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-[#E5E7EB] flex justify-between items-center">
+          <h2 className="text-base font-semibold text-[#111827]">Recent Evaluation Runs</h2>
+          <span className="text-xs text-[#6B7280] bg-[#F3F4F6] px-2 py-1 rounded font-medium border border-[#E5E7EB]">
             {runs.length} Runs total
           </span>
         </div>
 
         {loading ? (
-          <div className="p-12 text-center text-slate-400">Loading evaluation runs...</div>
+          <div className="p-12 text-center text-[#6B7280]">Loading evaluation runs...</div>
         ) : runs.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
+          <div className="p-12 text-center text-[#6B7280]">
             No evaluation runs found. Click "New Evaluation" to trigger your first run!
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse text-sm whitespace-nowrap">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                  <th className="py-4 px-6 w-12 text-center">Select</th>
-                  <th className="py-4 px-6">Name</th>
-                  <th className="py-4 px-6">Model</th>
-                  <th className="py-4 px-6">Prompt Version</th>
-                  <th className="py-4 px-6">Status</th>
-                  <th className="py-4 px-6 text-center">Pass Rate</th>
-                  <th className="py-4 px-6 text-center">Faithfulness</th>
-                  <th className="py-4 px-6 text-center">Relevance</th>
-                  <th className="py-4 px-6 text-center">Context Recall</th>
-                  <th className="py-4 px-6 text-center">Latency</th>
-                  <th className="py-4 px-6 text-center">Cost</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
+                <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] text-[11px] font-semibold uppercase tracking-wider">
+                  <th className="py-3 px-4 w-12 text-center">Select</th>
+                  <th className="py-3 px-4">Name</th>
+                  <th className="py-3 px-4">Model</th>
+                  <th className="py-3 px-4">Prompt</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-center">Pass Rate</th>
+                  <th className="py-3 px-4 text-center">Faithfulness</th>
+                  <th className="py-3 px-4 text-center">Relevance</th>
+                  <th className="py-3 px-4 text-center">Recall</th>
+                  <th className="py-3 px-4 text-center">Latency</th>
+                  <th className="py-3 px-4 text-center">Cost</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-sm">
@@ -323,81 +330,184 @@ export const Dashboard: React.FC<DashboardProps> = ({ onCompare, onViewDetails }
       {/* New Evaluation Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-lg max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-slate-800">
-              <h3 className="text-xl font-bold text-white">Trigger Evaluation Suite</h3>
-              <p className="text-slate-400 text-sm mt-1">Select parameters to run test cases against the chatbot.</p>
+          <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800/90 rounded-lg max-w-lg w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-800/80 bg-slate-900/40">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Play className="w-4 h-4 text-blue-500 fill-blue-500/20" /> Trigger Evaluation Run
+              </h3>
+              <p className="text-slate-400 text-[11px] mt-1">Configure evaluation parameters to run tests against the chatbot.</p>
             </div>
             
-            <form onSubmit={handleTriggerRun} className="p-6 space-y-4">
-              {/* Dataset Selection */}
-              <div>
-                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Target Dataset</label>
-                <select
-                  value={datasetId}
-                  onChange={(e) => setDatasetId(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-md p-2.5 text-white focus:border-slate-700 outline-none text-sm"
-                  required
-                >
-                  {datasets.map(ds => (
-                    <option key={ds.id} value={ds.id}>{ds.name} ({ds.test_cases.length} test cases)</option>
-                  ))}
-                </select>
+            <form onSubmit={handleTriggerRun} className="p-6 space-y-5">
+              {/* STEP 1: DATASET & NAME */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300">STEP 1</span>
+                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Evaluation Scope</span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">Target Dataset</label>
+                    {datasets.length === 0 ? (
+                      <div className="bg-amber-950/20 border border-amber-500/20 rounded-md p-3 space-y-2">
+                        <div className="text-amber-400 text-[11px] font-semibold flex items-center gap-1.5">
+                          <span>⚠️ No Datasets Loaded</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 leading-relaxed">
+                          The database is empty. Run <code>python app/seed.py</code> inside the backend folder to seed.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleRetry}
+                          disabled={isRetrying}
+                          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/40 hover:border-amber-400 text-amber-400 rounded text-xs transition-all font-bold shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${isRetrying ? 'animate-spin' : ''}`} />
+                          {isRetrying ? 'Scanning...' : 'Retry Connection'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <select
+                          value={datasetId}
+                          onChange={(e) => setDatasetId(Number(e.target.value))}
+                          className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-md py-2.5 px-3 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none text-xs appearance-none cursor-pointer transition-all"
+                          required
+                          style={{ minHeight: '38px' }}
+                        >
+                          {datasets.map(ds => (
+                            <option key={ds.id} value={ds.id}>{ds.name} ({ds.test_cases.length} cases)</option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">Run Name (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="Default: Date & Time"
+                      value={runName}
+                      onChange={(e) => setRunName(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-md py-2.5 px-3 text-white placeholder-slate-700 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none text-xs transition-all"
+                      style={{ minHeight: '38px' }}
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Run Name */}
-              <div>
-                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Run Name (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. gpt-4o-mini prompt v1.2"
-                  value={runName}
-                  onChange={(e) => setRunName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-md p-2.5 text-white placeholder-slate-600 focus:border-slate-700 outline-none text-sm"
-                />
+              {/* STEP 2: MODEL ROUTING */}
+              <div className="border-t border-slate-800/40 pt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300">STEP 2</span>
+                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Model Routing</span>
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">System Model Under Test</label>
+                  <input
+                    type="text"
+                    placeholder="Enter model string or click quick-pill"
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-md py-2.5 px-3 text-white placeholder-slate-700 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none text-xs font-mono transition-all"
+                    required
+                    style={{ minHeight: '38px' }}
+                  />
+
+                  {/* Clickable Quick Pills */}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setModel('gpt-4o-mini')}
+                      className={`px-2.5 py-1 text-[10px] rounded-full border transition-all ${
+                        model === 'gpt-4o-mini'
+                          ? 'bg-blue-900/25 border-blue-500/70 text-blue-400 font-semibold'
+                          : 'bg-slate-950 border-slate-800/60 text-slate-400 hover:text-white hover:border-slate-700'
+                      }`}
+                    >
+                      gpt-4o-mini (OpenAI)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModel('hf/meta-llama/Meta-Llama-3-8B-Instruct')}
+                      className={`px-2.5 py-1 text-[10px] rounded-full border transition-all ${
+                        model === 'hf/meta-llama/Meta-Llama-3-8B-Instruct'
+                          ? 'bg-purple-900/25 border-purple-500/70 text-purple-400 font-semibold'
+                          : 'bg-slate-950 border-slate-800/60 text-slate-400 hover:text-white hover:border-slate-700'
+                      }`}
+                    >
+                      Llama-3 8B (HF)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModel('hf/google/gemma-2-9b-it')}
+                      className={`px-2.5 py-1 text-[10px] rounded-full border transition-all ${
+                        model === 'hf/google/gemma-2-9b-it'
+                          ? 'bg-orange-950/25 border-orange-500/70 text-orange-400 font-semibold'
+                          : 'bg-slate-950 border-slate-800/60 text-slate-400 hover:text-white hover:border-slate-700'
+                      }`}
+                    >
+                      Gemma-2 9B (HF)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModel('ollama/llama3')}
+                      className={`px-2.5 py-1 text-[10px] rounded-full border transition-all ${
+                        model === 'ollama/llama3'
+                          ? 'bg-emerald-950/25 border-emerald-500/70 text-emerald-400 font-semibold'
+                          : 'bg-slate-950 border-slate-800/60 text-slate-400 hover:text-white hover:border-slate-700'
+                      }`}
+                    >
+                      Llama-3 (Ollama)
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* SUT Model selection */}
-              <div>
-                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">System Model</label>
-                <input
-                  type="text"
-                  placeholder="e.g. gpt-4o-mini or hf/mistralai/Mistral-7B-Instruct-v0.2"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-md p-2.5 text-white focus:border-slate-700 outline-none text-sm"
-                  required
-                />
-              </div>
+              {/* STEP 3: CONFIG TAG */}
+              <div className="border-t border-slate-800/40 pt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300">STEP 3</span>
+                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Evaluation Meta-Tag</span>
+                </div>
 
-              {/* Prompt version */}
-              <div>
-                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Prompt Version / Config Tag</label>
-                <input
-                  type="text"
-                  placeholder="e.g. v1.2-rag-baseline"
-                  value={promptVersion}
-                  onChange={(e) => setPromptVersion(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-md p-2.5 text-white focus:border-slate-700 outline-none text-sm"
-                  required
-                />
+                <div>
+                  <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">Prompt Version / Config Tag</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. v1.0-rag-baseline"
+                    value={promptVersion}
+                    onChange={(e) => setPromptVersion(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-md py-2.5 px-3 text-white placeholder-slate-750 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 outline-none text-xs transition-all"
+                    required
+                    style={{ minHeight: '38px' }}
+                  />
+                </div>
               </div>
 
               {/* Actions */}
-              <div className="flex space-x-3 pt-4 border-t border-slate-800/60 justify-end">
+              <div className="flex space-x-3 pt-4 border-t border-slate-800/80 justify-end">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-slate-800 text-slate-400 hover:text-white rounded-md transition-all text-sm font-semibold"
+                  className="px-4 py-2 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white rounded-md transition-all text-xs font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-md transition-all text-sm font-semibold flex items-center gap-1"
+                  disabled={isSubmitting || datasets.length === 0}
+                  className="px-6 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white rounded-md transition-all text-xs font-bold font-orbitron uppercase tracking-wider flex items-center gap-2 shadow-[0_0_15px_rgba(2,132,199,0.6)] hover:shadow-[0_0_25px_rgba(2,132,199,0.8)]"
                 >
-                  {isSubmitting ? 'Submitting...' : 'Run Evaluation'}
+                  {isSubmitting ? 'INITIATING...' : 'RUN EVALUATION'}
                 </button>
               </div>
             </form>
