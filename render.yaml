@@ -1,0 +1,47 @@
+# render.yaml — Render Blueprint for one-click deployment
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  # ── Backend: FastAPI API Server ──────────────────────────────
+  - type: web
+    name: veritas-api
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: |
+      pip install -r requirements.txt
+      python -c "import nltk; nltk.download('punkt_tab', quiet=True)"
+      python app/seed.py
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./veritas.db
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+      - key: HUGGINGFACE_API_KEY
+        sync: false  # Render will prompt you to enter this secret during deploy
+    healthCheckPath: /
+    autoDeploy: true
+
+  # ── Frontend: React + Vite Static Site ──────────────────────
+  - type: web
+    name: veritas-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://veritas-api.onrender.com
+    autoDeploy: true
