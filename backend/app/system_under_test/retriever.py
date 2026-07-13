@@ -1,7 +1,9 @@
 import os
 import re
 from typing import List, Dict, Any
+# pyrefly: ignore [missing-import]
 import chromadb
+# pyrefly: ignore [missing-import]
 from chromadb.utils import embedding_functions
 
 # Path configurations
