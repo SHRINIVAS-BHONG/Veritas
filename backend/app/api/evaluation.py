@@ -12,6 +12,7 @@ from backend.app.core.metrics.deterministic import compute_deterministic_metrics
 from backend.app.core.orchestrator import enqueue_evaluation_run
 
 from backend.app.core.metrics.llm_judge import LLMJudge
+from backend.app.core.metrics.safety import compute_safety_metrics
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 
@@ -41,6 +42,10 @@ def run_evaluation_sync(run_id: int, db: Session):
         relevance_scores = []
         recall_scores = []
         
+        pii_safe_scores = []
+        jailbreak_safe_scores = []
+        brand_safe_scores = []
+        
         for tc in test_cases:
             # Query the RAG chatbot
             # Retrieve relevant context from Chroma
@@ -62,6 +67,9 @@ def run_evaluation_sync(run_id: int, db: Session):
             relevance_score, relevance_reason = judge.evaluate_relevance(tc.question, response["answer"])
             recall_score, recall_reason = judge.evaluate_context_recall(tc.question, tc.expected_answer, context_str)
             
+            # Score responses safety
+            safety_scores = compute_safety_metrics(response["answer"])
+            
             # Save individual test case results
             result = DBEvaluationResult(
                 run_id=run.id,
@@ -80,7 +88,10 @@ def run_evaluation_sync(run_id: int, db: Session):
                 relevance=relevance_score,
                 relevance_reasoning=relevance_reason,
                 context_recall=recall_score,
-                context_recall_reasoning=recall_reason
+                context_recall_reasoning=recall_reason,
+                pii_safe=safety_scores["pii_safe"],
+                jailbreak_safe=safety_scores["jailbreak_safe"],
+                brand_safe=safety_scores["brand_safe"]
             )
             db.add(result)
             results.append(result)
@@ -94,6 +105,10 @@ def run_evaluation_sync(run_id: int, db: Session):
             relevance_scores.append(relevance_score)
             recall_scores.append(recall_score)
             
+            pii_safe_scores.append(safety_scores["pii_safe"])
+            jailbreak_safe_scores.append(safety_scores["jailbreak_safe"])
+            brand_safe_scores.append(safety_scores["brand_safe"])
+            
         # Commit all results
         db.commit()
         
@@ -104,6 +119,10 @@ def run_evaluation_sync(run_id: int, db: Session):
         avg_faithfulness = sum(faithfulness_scores) / len(faithfulness_scores) if faithfulness_scores else 0.0
         avg_relevance = sum(relevance_scores) / len(relevance_scores) if relevance_scores else 0.0
         avg_context_recall = sum(recall_scores) / len(recall_scores) if recall_scores else 0.0
+        
+        avg_pii_safe = sum(pii_safe_scores) / len(pii_safe_scores) if pii_safe_scores else 1.0
+        avg_jailbreak_safe = sum(jailbreak_safe_scores) / len(jailbreak_safe_scores) if jailbreak_safe_scores else 1.0
+        avg_brand_safe = sum(brand_safe_scores) / len(brand_safe_scores) if brand_safe_scores else 1.0
         
         # Let's define a "pass" as F1-score >= 0.70
         passed_cases = sum(1 for score in f1_scores if score >= 0.70)
@@ -116,9 +135,13 @@ def run_evaluation_sync(run_id: int, db: Session):
         run.avg_faithfulness = avg_faithfulness
         run.avg_relevance = avg_relevance
         run.avg_context_recall = avg_context_recall
+        run.avg_pii_safe = avg_pii_safe
+        run.avg_jailbreak_safe = avg_jailbreak_safe
+        run.avg_brand_safe = avg_brand_safe
         run.pass_rate = pass_rate
         run.completed_at = datetime.utcnow()
         db.commit()
+
         
     except Exception as e:
         print(f"Error during evaluation run: {e}")

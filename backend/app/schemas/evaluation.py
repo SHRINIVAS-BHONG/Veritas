@@ -24,6 +24,12 @@ class EvaluationResultBase(BaseModel):
     
     context_recall: Optional[float] = None
     context_recall_reasoning: Optional[str] = None
+    
+    # Safety Metrics
+    pii_safe: Optional[float] = None
+    jailbreak_safe: Optional[float] = None
+    brand_safe: Optional[float] = None
+
 
 class EvaluationResultCreate(EvaluationResultBase):
     pass
@@ -53,6 +59,9 @@ class EvaluationRun(EvaluationRunBase):
     avg_faithfulness: Optional[float] = None
     avg_relevance: Optional[float] = None
     avg_context_recall: Optional[float] = None
+    avg_pii_safe: Optional[float] = None
+    avg_jailbreak_safe: Optional[float] = None
+    avg_brand_safe: Optional[float] = None
     pass_rate: Optional[float] = None
     
     created_at: datetime

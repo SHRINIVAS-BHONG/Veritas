@@ -19,6 +19,9 @@ class EvaluationRun(Base):
     avg_faithfulness = Column(Float, nullable=True)
     avg_relevance = Column(Float, nullable=True)
     avg_context_recall = Column(Float, nullable=True)
+    avg_pii_safe = Column(Float, nullable=True)
+    avg_jailbreak_safe = Column(Float, nullable=True)
+    avg_brand_safe = Column(Float, nullable=True)
     pass_rate = Column(Float, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -60,6 +63,11 @@ class EvaluationResult(Base):
     
     context_recall = Column(Float, nullable=True)
     context_recall_reasoning = Column(Text, nullable=True)
+    
+    # Safety Metrics
+    pii_safe = Column(Float, default=1.0)
+    jailbreak_safe = Column(Float, default=1.0)
+    brand_safe = Column(Float, default=1.0)
     
     created_at = Column(DateTime, default=datetime.utcnow)
 
