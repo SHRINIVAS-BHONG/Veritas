@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: veritas_user
+      POSTGRES_PASSWORD: veritas_password
+      POSTGRES_DB: veritas_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - veritas_pgdata_v2:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  veritas_pgdata_v2:

@@ -1,0 +1,27 @@
+# Web Framework
+fastapi
+uvicorn[standard]
+pydantic-settings
+
+# Database & ORM
+sqlalchemy
+alembic
+asyncpg
+psycopg2-binary
+
+# Task Queue
+celery
+redis
+
+# Authentication & Security
+authlib
+passlib[bcrypt]
+python-jose[cryptography]
+
+# Automation & UI Testing
+playwright
+pytest
+pytest-asyncio
+
+# LLM Integration
+google-genai
