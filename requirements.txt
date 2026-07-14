@@ -17,6 +17,7 @@ redis
 authlib
 passlib[bcrypt]
 python-jose[cryptography]
+itsdangerous
 
 # Automation & UI Testing
 playwright
@@ -25,3 +26,7 @@ pytest-asyncio
 
 # LLM Integration
 google-genai
+
+# Implementation Components
+docker
+redis>=4.2.0

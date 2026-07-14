@@ -1,8 +1,9 @@
-version: "3.8"
+version: '3.8'
+
 services:
   db:
     image: postgres:16-alpine
-    restart: always
+    container_name: veritas_pg
     environment:
       POSTGRES_USER: veritas_user
       POSTGRES_PASSWORD: veritas_password
@@ -11,12 +12,58 @@ services:
       - "5432:5432"
     volumes:
       - veritas_pgdata_v2:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U veritas_user -d veritas_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
-    image: redis:7-alpine
-    restart: always
+    image: redis:alpine
+    container_name: veritas_redis
     ports:
       - "6379:6379"
+
+  api:
+    build: 
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: veritas_api
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_USER=veritas_user
+      - POSTGRES_PASSWORD=veritas_password
+      - POSTGRES_DB=veritas_db
+      - POSTGRES_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    container_name: veritas_celery
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - POSTGRES_USER=veritas_user
+      - POSTGRES_PASSWORD=veritas_password
+      - POSTGRES_DB=veritas_db
+      - POSTGRES_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - //var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   veritas_pgdata_v2:
