@@ -30,27 +30,68 @@ class PlaywrightEvaluator:
 
     async def inject_payload_and_read_response(self, page: Page, payload: str) -> str:
         """
-        Dynamically finds a chat input, injects the payload, submits, and reads the last response.
+        Dynamically handles modals, searches the main page AND all embedded iframes to find 
+        the chat input, injects the payload, submits, and reads the response.
         """
         try:
-            # Semantic locators for chat interfaces
-            input_locator = page.locator('textarea, input[type="text"]').first
+            # Wait for the network to settle
+            await page.wait_for_load_state("networkidle", timeout=10000)
+            
+            # 0. Auto-Dismiss Common Modals (e.g., "Continue as guest", "Accept Cookies", "Close")
+            modal_dismiss_selectors = [
+                'button:has-text("Continue as guest")',
+                'button:has-text("Accept")',
+                'button:has-text("Close")',
+                'button:has-text("I understand")',
+                'button[aria-label="Close"]',
+                '.modal-close',
+            ]
+            for selector in modal_dismiss_selectors:
+                dismiss_btn = page.locator(selector).first
+                if await dismiss_btn.is_visible(timeout=500):
+                    await dismiss_btn.click()
+                    await page.wait_for_timeout(1000) # wait for modal animation
+
+            target_frame = None
+            input_locator = None
+            
+            # 1. Recursive Frame Traversal (For HuggingFace/Streamlit)
+            frames_to_check = [page] + page.frames
+            
+            for frame in frames_to_check:
+                # Semantic chat inputs
+                possible_inputs = frame.locator('textarea, input[type="text"][placeholder*="message" i], input[type="text"][placeholder*="chat" i]')
+                
+                if await possible_inputs.count() > 0:
+                    for i in range(await possible_inputs.count()):
+                        loc = possible_inputs.nth(i)
+                        if await loc.is_visible():
+                            input_locator = loc
+                            target_frame = frame
+                            break
+                if input_locator:
+                    break
+                    
+            if not input_locator:
+                return "VERITAS_ERROR: Could not locate an actionable chat input in the DOM or iframes."
+
+            # 2. Inject Payload
             await input_locator.fill(payload)
             
-            # Find submit button or press Enter
-            submit_btn = page.locator('button[type="submit"], button:has-text("Send"), button:has-text("Submit")').first
+            # 3. Submit Payload
+            submit_btn = target_frame.locator('button[type="submit"], button:has-text("Send"), button:has-text("Submit"), button[aria-label="Send message"]').first
             if await submit_btn.is_visible():
                 await submit_btn.click()
             else:
                 await input_locator.press("Enter")
                 
-            # Auto-wait for network idle or a specific timeout to let LLM generate response
-            await page.wait_for_timeout(3000)
+            # 4. Await LLM Generation
+            await page.wait_for_timeout(5000)
             
-            # Extract all text on the page to find the response (simplistic approach for arbitrary apps)
-            # In a production scenario, we'd use Gemini to identify the exact DOM node of the response.
-            body_text = await page.locator("body").inner_text()
+            # 5. Extract Response
+            body_text = await target_frame.locator("body").inner_text()
             return body_text
+            
         except Exception as e:
             return f"Playwright interaction failed: {e}"
 

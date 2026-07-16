@@ -4,18 +4,9 @@ from typing import Dict, Any
 
 from src.api.dependencies import get_current_user
 from src.models.user_model import User
-from src.tasks.background_tasks import test_dummy_task
 from celery.result import AsyncResult
 
 router = APIRouter()
-
-@router.post("/trigger-dummy", response_model=Dict[str, Any])
-async def trigger_dummy_task(seconds: int = 5, current_user: User = Depends(get_current_user)):
-    """
-    Dispatches a dummy background task to Celery.
-    """
-    task = test_dummy_task.delay(seconds)
-    return {"task_id": task.id, "status": "processing"}
 
 class RepoAnalyzeRequest(BaseModel):
     repo_url: str

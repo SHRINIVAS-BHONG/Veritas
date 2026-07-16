@@ -7,13 +7,13 @@ class Settings(BaseSettings):
     # PostgreSQL Database
     POSTGRES_USER: str = "veritas_user"
     POSTGRES_PASSWORD: str = "veritas_password"
-    POSTGRES_SERVER: str = "localhost"
+    POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: str = "5432"
     POSTGRES_DB: str = "veritas_db"
     
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"

@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Dict, Any
 
-from src.api.dependencies import get_current_user
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, desc
+from src.api.dependencies import get_current_user, get_db
 from src.models.user_model import User
+from src.models.test_result_model import TestResult
 from celery.result import AsyncResult  # type: ignore
 
 router = APIRouter()
@@ -16,7 +19,8 @@ class EvaluationRequest(BaseModel):
 @router.post("/run", response_model=Dict[str, Any])
 async def trigger_evaluation(
     request: EvaluationRequest, 
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Triggers a full end-to-end evaluation: 
@@ -28,13 +32,70 @@ async def trigger_evaluation(
         request.target_app_url,
         request.attack_type
     )
+    
+    # Create initial DB record so it shows up in history immediately
+    initial_record = TestResult(
+        task_id=task.id,
+        target_url=request.target_app_url,
+        attack_type=request.attack_type,
+        payload="",
+        system_response={},
+        status="processing"
+    )
+    db.add(initial_record)
+    await db.commit()
+    
     return {"evaluation_task_id": task.id, "status": "processing"}
 
+@router.get("/history")
+async def get_evaluation_history(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Retrieves the history of evaluations from the database.
+    """
+    result = await db.execute(select(TestResult).order_by(desc(TestResult.created_at)))
+    test_results = result.scalars().all()
+    
+    return [
+        {
+            "id": tr.id,
+            "task_id": tr.task_id,
+            "target_url": tr.target_url,
+            "attack_type": tr.attack_type,
+            "status": tr.status,
+            "created_at": tr.created_at
+        } for tr in test_results
+    ]
+
 @router.get("/report/{task_id}")
-async def get_evaluation_report(task_id: str, current_user: User = Depends(get_current_user)):
+async def get_evaluation_report(
+    task_id: str, 
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
     """
     Retrieves the comprehensive security evaluation report.
+    First checks the database. If not found, falls back to Celery task state.
     """
+    result = await db.execute(select(TestResult).where(TestResult.task_id == task_id))
+    db_report = result.scalars().first()
+    
+    if db_report:
+        return {
+            "task_id": db_report.task_id,
+            "status": "completed" if db_report.status != "error" else "failed",
+            "report": {
+                "target_url": db_report.target_url,
+                "attack_type": db_report.attack_type,
+                "payload": db_report.payload,
+                "system_response": db_report.system_response,
+                "status": db_report.status,
+                "created_at": str(db_report.created_at)
+            }
+        }
+        
     task_result = AsyncResult(task_id)
     if not task_result.ready():
         return {"task_id": task_id, "status": task_result.status}

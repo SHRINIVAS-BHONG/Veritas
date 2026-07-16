@@ -44,5 +44,7 @@ async def auth_github_callback(request: Request, db: AsyncSession = Depends(get_
     # Generate JWT
     access_token = create_access_token(subject=user.id)
     
-    # In a real app, redirect to frontend with token, e.g. /dashboard?token={access_token}
-    return {"access_token": access_token, "token_type": "bearer"}
+    # Redirect to frontend with token
+    frontend_url = "http://localhost:5173/dashboard"
+    return RedirectResponse(url=f"{frontend_url}?token={access_token}")
+

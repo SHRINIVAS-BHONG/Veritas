@@ -57,7 +57,11 @@ def analyze_directory(directory_path: str) -> Dict[str, List[str]]:
     Returns a dictionary mapping file paths to lists of detected libraries.
     """
     results = {}
-    for root, _, files in os.walk(directory_path):
+    IGNORED_DIRS = {".git", "venv", ".venv", "env", ".env", "node_modules", "__pycache__", ".mypy_cache"}
+    
+    for root, dirs, files in os.walk(directory_path):
+        dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
+        
         for file in files:
             if file.endswith(".py"):
                 full_path = os.path.join(root, file)

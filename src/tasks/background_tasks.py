@@ -10,17 +10,6 @@ from src.services.adversary import AdversaryEngine
 from src.db.session import AsyncSessionLocal
 from src.models.test_result_model import TestResult
 
-@celery_app.task(bind=True, name="test_dummy_task")
-def test_dummy_task(self, seconds: int = 5):
-    """
-    A dummy task to verify Celery workers are picking up tasks from Redis.
-    """
-    self.update_state(state='PROGRESS', meta={'progress': 0})
-    time.sleep(seconds / 2)
-    self.update_state(state='PROGRESS', meta={'progress': 50})
-    time.sleep(seconds / 2)
-    return {"status": "completed", "result": f"slept for {seconds} seconds"}
-
 import docker
 
 @celery_app.task(bind=True, name="analyze_repository_task")
@@ -28,7 +17,8 @@ def analyze_repository_task(self, repo_url: str):
     """
     Clones a GitHub repository inside an ephemeral Docker container and runs AST analyzer.
     """
-    self.update_state(state='PROGRESS', meta={'status': 'Provisioning secure Sandbox...'})
+    if self.request.id:
+        self.update_state(state='PROGRESS', meta={'status': 'Provisioning secure Sandbox...'})
     
     script = """
 import os, ast, subprocess, json
@@ -57,7 +47,10 @@ class LLMImportVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 results = {}
-for root, _, files in os.walk("/repo"):
+IGNORED_DIRS = {".git", "venv", ".venv", "env", ".env", "node_modules", "__pycache__", ".mypy_cache"}
+
+for root, dirs, files in os.walk("/repo"):
+    dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
     for file in files:
         if file.endswith(".py"):
             path = os.path.join(root, file)
@@ -77,11 +70,13 @@ print("VERITAS_RESULT::" + json.dumps(results))
     
     try:
         client = docker.from_env()
-        self.update_state(state='PROGRESS', meta={'status': 'Running AST static analysis in Sandbox...'})
+        if self.request.id:
+            self.update_state(state='PROGRESS', meta={'status': 'Running AST static analysis in Sandbox...'})
         
         container_output = client.containers.run(
             "python:3.10-slim",
-            command=["sh", "-c", f"apt-get update && apt-get install -y git && python -c '''{script}'''"],
+            command=["sh", "-c", "apt-get update && apt-get install -y git && echo \"$VERITAS_SCRIPT\" | python"],
+            environment={"VERITAS_SCRIPT": script},
             remove=True,
             network_mode="bridge",
             stdout=True,
@@ -124,17 +119,30 @@ def dynamic_ui_evaluation_task(self, target_url: str):
     except Exception as e:
         return {"status": "failed", "error": str(e)}
 
+from sqlalchemy import select
+
 async def save_test_result_to_db(task_id: str, target_url: str, attack_type: str, payload: str, system_response: dict, status: str):
     async with AsyncSessionLocal() as session:
-        result = TestResult(
-            task_id=task_id,
-            target_url=target_url,
-            attack_type=attack_type,
-            payload=payload,
-            system_response=system_response,
-            status=status
-        )
-        session.add(result)
+        # Check if record already exists
+        result = await session.execute(select(TestResult).where(TestResult.task_id == task_id))
+        existing_record = result.scalars().first()
+        
+        if existing_record:
+            existing_record.target_url = target_url
+            existing_record.attack_type = attack_type
+            existing_record.payload = payload
+            existing_record.system_response = system_response
+            existing_record.status = status
+        else:
+            new_record = TestResult(
+                task_id=task_id,
+                target_url=target_url,
+                attack_type=attack_type,
+                payload=payload,
+                system_response=system_response,
+                status=status
+            )
+            session.add(new_record)
         await session.commit()
 
 import json
@@ -164,7 +172,7 @@ def master_evaluation_task(self, github_repo_url: str, target_app_url: str, atta
     broadcast_update(task_id, "1/3", "Running Static AST Analysis")
     
     # 1. Static AST Analysis
-    ast_task = analyze_repository_task(self, github_repo_url)
+    ast_task = analyze_repository_task(github_repo_url)
     if ast_task.get("status") == "failed":
         error_msg = ast_task.get("error")
         broadcast_update(task_id, "1/3", "failed", {"error": error_msg})
